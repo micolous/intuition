@@ -87,6 +87,8 @@ class OwlIntuitionProtocol(DatagramProtocol):
 		:type iface: str
 		"""
 		self.iface = iface
+		
+		DatagramProtocol.__init__(self)
 
 	def startProtocol(self):
 		self.transport.joinGroup(MCAST_ADDR, self.iface)
