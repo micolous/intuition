@@ -52,7 +52,10 @@ class RrdOwlProtocol(OwlIntuitionProtocol):
 		o = ':'.join(o)
 		
 		# update database
-		rrdtool.update(self.rrd, o)
+		res = rrdtool.update(self.rrd, o)
+		
+		if res:
+			print rrdtool.error()
 
 if __name__ == '__main__':
 	parser = ArgumentParser()
