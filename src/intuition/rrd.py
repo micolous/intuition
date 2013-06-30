@@ -46,8 +46,8 @@ class RrdOwlProtocol(OwlIntuitionProtocol):
 		
 		o = ['N']
 		for channel in chan_names:
-			o.append(str(msg.channels[channel].current_w))
-			o.append(str(msg.channels[channel].daily_wh))
+			o.append(str(msg.channels[channel].current_w.to_integral_value())))
+			o.append(str(msg.channels[channel].daily_wh.to_integral_value()))
 		
 		o = ':'.join(o)
 		
