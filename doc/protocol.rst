@@ -1,9 +1,9 @@
 Protocol notes for Owl Intuition (Network Owl)
 ==============================================
 
-Events are broadcast on LAN via Multicast UDP address ``224.192.32.19:22600``.
+Events are broadcast on LAN via Multicast UDP address ``224.192.32.19:22600``.  Events are transmitted in XML.
 
-Events are transmitted in XML.
+These events are from the OWL Intuition-lc.  There may be some more events with the OWL Intuition-pv, however I don't know anything about it (as I do not own the unit nor have a PV generator).
 
 .. highlight:: xml
 
@@ -19,15 +19,15 @@ Example::
 	  <battery level='100%'/>
 	  <chan id='0'>
 	    <curr units='w'>257.00</curr>
-		<day units='wh'>17.13</day>
+	    <day units='wh'>17.13</day>
 	  </chan>
 	  <chan id='1'>
 	    <curr units='w'>96.00</curr>
-		<day units='wh'>6.40</day>
+	    <day units='wh'>6.40</day>
 	  </chan>
 	  <chan id='2'>
 	    <curr units='w'>32.00</curr>
-		<day units='wh'>2.13</day>
+	    <day units='wh'>2.13</day>
 	  </chan>
 	</electricity>
 
@@ -47,6 +47,8 @@ weather event
 -------------
 
 These show local weather information, not anything in the device.  It is retrieved from a web service that the Network Owl connects to.  There isn't any sensor in the Network Owl that gives this information.
+
+This library ignores these messages.
 
 Example::
 

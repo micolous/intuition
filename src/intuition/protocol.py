@@ -41,11 +41,11 @@ class OwlChannel(object):
 
 class OwlMessage(object):
 	def __init__(self, datagram):
-		print "datagram: %r" % (datagram,)
+		#print "datagram: %r" % (datagram,)
 		self.root = objectify.fromstring(datagram)
 		
 		# there are also weather events -- we don't care about these
-		assert (self.root.tag == 'electricity'), 'OwlMessage XML must have `electricity` root node.'
+		assert (self.root.tag == 'electricity'), ('OwlMessage XML must have `electricity` root node (got %r).' % self.root.tag)
 		
 		# note that the MAC address is given by the message, not the packet.
 		# this can be spoofed
@@ -54,6 +54,9 @@ class OwlMessage(object):
 		# read signal information for the sensor's 433MHz link
 		self.rssi = Decimal(self.root.signal[0].attrib['rssi'])
 		self.lqi = Decimal(self.root.signal[0].attrib['lqi'])
+		
+		# read battery information from the sensor.
+		self.battery = Decimal(self.root.battery[0].attrib['level'][:-1])
 		
 		# read sensors (channels)
 		self.channels = {}
