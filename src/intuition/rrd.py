@@ -21,11 +21,13 @@ from __future__ import absolute_import
 from .protocol import OwlIntuitionProtocol, MCAST_PORT
 from twisted.internet import reactor
 from argparse import ArgumentParser
+import rrdtool
 
 
 class RrdOwlProtocol(OwlIntuitionProtocol):
-	def __init__(self, src, *args, **kwargs):
+	def __init__(self, src, rrd, *args, **kwargs):
 		self.src = src
+		self.rrd = rrd
 		super(RrdOwlProtocol, self).__init__(*args, **kwargs)
 
 	def owlRecieved(self, address, msg):
@@ -37,6 +39,20 @@ class RrdOwlProtocol(OwlIntuitionProtocol):
 		
 		# we are good.
 		print msg
+		
+		# iterate channels sorted by channel name, and get their data
+		chan_names = msg.channels.keys()
+		chan_names.sort()
+		
+		o = ['N']
+		for channel in chan_names:
+			o.append(str(msg.channels[channel].current_w))
+			o.append(str(msg.channels[channel].daily_wh))
+		
+		o = ':'.join(o)
+		
+		# update database
+		rrdtool.update(self.rrd, o)
 
 if __name__ == '__main__':
 	parser = ArgumentParser()
@@ -45,9 +61,11 @@ if __name__ == '__main__':
 	
 	parser.add_argument('-i', '--iface', dest='iface', default='', help='Network interface to use for getting data.')
 	
+	parser.add_argument('-r', '--rrd', dest='rrd', help='Path to RRD database')
+	
 	options = parser.parse_args()
 	
-	protocol = RrdOwlProtocol(src=options.src, iface=options.iface)
+	protocol = RrdOwlProtocol(src=options.src, rrd=options.rrd, iface=options.iface)
 	
 	reactor.listenMulticast(MCAST_PORT, protocol, listenMultiple=True)
 	reactor.run()
