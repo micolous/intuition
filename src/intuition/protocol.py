@@ -76,8 +76,17 @@ class OwlMessage(object):
 
 
 class OwlIntuitionProtocol(DatagramProtocol):
+	def __init__(self, iface=''):
+		"""
+		Protocol for Owl Intution (Network Owl) multicast UDP.
+		
+		:param iface: Name of the interface to use to communicate with the Network Owl.  If not specified, uses the default network connection on the cost.
+		:type iface: str
+		"""
+		self.iface = iface
+
 	def startProtocol(self):
-		self.transport.joinGroup(MCAST_ADDR)
+		self.transport.joinGroup(MCAST_ADDR, self.iface)
 	
 	def datagramReceived(self, datagram, address):
 		msg = OwlMessage(datagram)
@@ -89,5 +98,12 @@ class OwlIntuitionProtocol(DatagramProtocol):
 
 if __name__ == '__main__':
 	from twisted.internet import reactor
-	reactor.listenMulticast(MCAST_PORT, OwlIntuitionProtocol(), listenMultiple=True)
+	from argparse import ArgumentParser
+	parser = ArgumentParser()
+	parser.add_argument('-i', '--iface', dest='iface', default='', help='Network interface to use for getting data.')
+	
+	options = parser.parse_args()
+	
+	protocol = OwlIntuitionProtocol(iface=options.iface)
+	reactor.listenMulticast(MCAST_PORT, protocol, listenMultiple=True)
 	reactor.run()

@@ -24,8 +24,9 @@ from argparse import ArgumentParser
 
 
 class RrdOwlProtocol(OwlIntuitionProtocol):
-	def __init__(self, src):
+	def __init__(self, src, *args, **kwargs):
 		self.src = src
+		super(RrdOwlProtocol, self).__init__(*args, **kwargs)
 
 	def owlRecieved(self, address, msg):
 		ip, port = address
@@ -42,9 +43,11 @@ if __name__ == '__main__':
 	
 	parser.add_argument('-s', '--src', dest='src', help='Source address to accept data from.  This is the IP of your OWL Intuition.')
 	
+	parser.add_argument('-i', '--iface', dest='iface', default='', help='Network interface to use for getting data.')
+	
 	options = parser.parse_args()
 	
-	protocol = RrdOwlProtocol(options.src)
+	protocol = RrdOwlProtocol(src=options.src, iface=options.iface)
 	
 	reactor.listenMulticast(MCAST_PORT, protocol, listenMultiple=True)
 	reactor.run()
