@@ -70,7 +70,10 @@ class OwlMessage(object):
 			self.channels[channel.attrib['id']] = OwlChannel(channel.attrib['id'], channel.curr[0].text, channel.day[0].text)
 	
 	def __str__(self):
-		return '<OwlMessage: channels=%s>' % (
+		return '<OwlMessage: rssi=%s, lqi=%s, battery=%s%%, channels=%s>' % (
+			self.rssi,
+			self.lqi,
+			self.battery,
 			', '.join((str(x) for x in self.channels.itervalues()))
 		)
 
