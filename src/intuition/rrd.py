@@ -28,7 +28,7 @@ class RrdOwlProtocol(OwlIntuitionProtocol):
 	def __init__(self, src, rrd, *args, **kwargs):
 		self.src = src
 		self.rrd = rrd
-		RrdOwlProtocol.__init__(self, *args, **kwargs)
+		OwlIntuitionProtocol.__init__(self, *args, **kwargs)
 
 	def owlRecieved(self, address, msg):
 		ip, port = address
