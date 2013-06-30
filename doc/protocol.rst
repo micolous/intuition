@@ -1,5 +1,5 @@
-Protocol notes for Owl Intuition
-================================
+Protocol notes for Owl Intuition (Network Owl)
+==============================================
 
 Events are broadcast on LAN via Multicast UDP address ``224.192.32.19:22600``.
 
@@ -10,7 +10,9 @@ Events are transmitted in XML.
 electricity event
 -----------------
 
-These events are sent once every minute.
+These events are sent once every minute, and contain the live monitoring data from units connected to the Network Owl.
+
+Example::
 
 	<electricity id='443719123456'>
 	  <signal rssi='-42' lqi='15'/>
@@ -44,9 +46,11 @@ electricity.chan
 weather event
 -------------
 
-These show local weather information, not anything in the device.  It is retrieved from a web service.
+These show local weather information, not anything in the device.  It is retrieved from a web service that the Network Owl connects to.  There isn't any sensor in the Network Owl that gives this information.
 
-	<weather id='443719001C51' code='116'>
+Example::
+
+	<weather id='443719123456' code='116'>
 	  <temperature>11.00</temperature>
 	  <text>Partly Cloudy</text>
 	</weather>
