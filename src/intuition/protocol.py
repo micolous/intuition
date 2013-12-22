@@ -38,6 +38,19 @@ class OwlChannel(object):
 			self.daily_wh
 		)
 
+class OwlTemperature(object):
+	# structure for storing data about channels
+	def __init__(self, zone, current_temp, required_temp):
+		self.zone = zone
+		self.current_temp = current_temp
+		self.required_temp = required_temp
+
+	def __str__(self):
+		return '<OwlTemperature: zone=%s, current=%s, required=%s>' % (
+			self.zone,
+			self.current_temp,
+			self.required_temp
+		)
 
 class OwlMessage(object):
 	def __init__(self, datagram):
@@ -45,7 +58,7 @@ class OwlMessage(object):
 		self.root = objectify.fromstring(datagram)
 		
 		# there are also weather events -- we don't care about these
-		assert (self.root.tag == 'electricity'), ('OwlMessage XML must have `electricity` root node (got %r).' % self.root.tag)
+		assert (self.root.tag in ['electricity', 'heating'] ), ('OwlMessage XML must have `electricity` or `heating` root node (got %r).' % self.root.tag)
 		
 		# note that the MAC address is given by the message, not the packet.
 		# this can be spoofed
@@ -55,26 +68,36 @@ class OwlMessage(object):
 		self.rssi = Decimal(self.root.signal[0].attrib['rssi'])
 		self.lqi = Decimal(self.root.signal[0].attrib['lqi'])
 		
-		# read battery information from the sensor.
-		self.battery = Decimal(self.root.battery[0].attrib['level'][:-1])
+		# read battery information from the sensor.	
+		self.battery = self.root.battery[0].attrib['level']
+	
+		self.results = {}
+	
+		# Electric
+		if (self.root.tag == 'electricity'):
 		
-		# read sensors (channels)
-		self.channels = {}
-		for channel in self.root.chan:
-			assert channel.attrib['id'] not in self.channels, 'Channel duplicate'
+			# read sensors (channels)
+			for channel in self.root.chan:
+				assert channel.attrib['id'] not in self.results, 'Channel duplicate'
+				assert channel.curr[0].attrib['units'] == 'w', 'Current units must be watts'
+				assert channel.day[0].attrib['units'] == 'wh', 'Daily usage must be watthours'
 			
-			assert channel.curr[0].attrib['units'] == 'w', 'Current units must be watts'
-			assert channel.day[0].attrib['units'] == 'wh', 'Daily usage must be watthours'
-			
-			# we're good and done our tests, create a channel
-			self.channels[channel.attrib['id']] = OwlChannel(channel.attrib['id'], channel.curr[0].text, channel.day[0].text)
+				# we're good and done our tests, create a channel
+				self.results[channel.attrib['id']] = OwlChannel(channel.attrib['id'], channel.curr[0].text, channel.day[0].text)	
+	
+		# Heating
+		if (self.root.tag == 'heating'):
+			# read temperatures
+			for temp in self.root.temperature:
+				assert temp.attrib['zone'] not in self.results
+				self.results[temp.attrib['zone']] = OwlTemperature(temp.attrib['zone'], temp.current, temp.required)
 	
 	def __str__(self):
-		return '<OwlMessage: rssi=%s, lqi=%s, battery=%s%%, channels=%s>' % (
+		return '<OwlMessage: rssi=%s, lqi=%s, battery=%s, results=%s>' % (
 			self.rssi,
 			self.lqi,
 			self.battery,
-			', '.join((str(x) for x in self.channels.itervalues()))
+			', '.join((str(x) for x in self.results.itervalues()))
 		)
 
 
