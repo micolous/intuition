@@ -18,7 +18,7 @@ along with this library.  If not, see <http://www.gnu.org/licenses/>.
 """
 
 from __future__ import absolute_import
-from .protocol import OwlIntuitionProtocol, MCAST_PORT
+from .protocol import OwlIntuitionProtocol, MCAST_PORT, OwlElectricity
 from twisted.internet import reactor
 from argparse import ArgumentParser
 import rrdtool
@@ -37,6 +37,8 @@ class RrdOwlProtocol(OwlIntuitionProtocol):
 			# drop out, bad source
 			raise ValueError, 'Source address does not match for packet'
 		
+		assert isinstance(msg, OwlElectricity), 'This only supports electricity messages.'
+
 		# we are good.
 		print msg
 		
