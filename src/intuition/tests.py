@@ -52,6 +52,7 @@ def test_electricity():
 		assert msg.channels[k].channel_id == k
 		assert isinstance(msg.channels[k].current_w, Decimal)
 		assert isinstance(msg.channels[k].daily_wh, Decimal)
+		str(msg.channels[k])
 
 	assert msg.channels['0'].current_w == Decimal('257.00')
 	assert msg.channels['0'].daily_wh == Decimal('17.13')
@@ -59,6 +60,8 @@ def test_electricity():
 	assert msg.channels['1'].daily_wh == Decimal('6.40')
 	assert msg.channels['2'].current_w == Decimal('32.00')
 	assert msg.channels['2'].daily_wh == Decimal('2.13')
+	
+	str(msg)
 
 
 def test_heating_22():
@@ -84,3 +87,5 @@ def test_heating_22():
 	assert msg.zones['0'].zone_id == '0'
 	assert msg.zones['0'].current_temp == Decimal('22.37')
 	assert msg.zones['0'].required_temp == Decimal('15.00')
+	str(msg)
+	str(msg.zones['0'])

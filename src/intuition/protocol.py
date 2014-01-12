@@ -106,6 +106,13 @@ class OwlTemperature(object):
 		documentation, but appear to be degrees Celcius.
 		"""
 		return self._required_temp
+		
+	def __str__(self):
+		return '<OwlTemperature: id=%s, current=%s C, required=%s C>' % (
+			self.zone_id,
+			self.current_temp,
+			self.required_temp
+		)
 	
 
 
@@ -143,6 +150,13 @@ class OwlHeating(OwlBaseMessage):
 		"""
 		return self._zones
 
+	def __str__(self):
+		return '<OwlHeating: rssi=%s, lqi=%s, battery=%s mV, zones=%s>' % (
+			self.rssi,
+			self.lqi,
+			self.battery_mv,
+			', '.join((str(x) for x in self.zones.itervalues()))
+		)
 
 class OwlElectricity(OwlBaseMessage):
 	def __init__(self, datagram):
@@ -193,7 +207,7 @@ class OwlElectricity(OwlBaseMessage):
 		return '<OwlElectricity: rssi=%s, lqi=%s, battery=%s%%, channels=%s>' % (
 			self.rssi,
 			self.lqi,
-			self.battery,
+			self.battery_pc,
 			', '.join((str(x) for x in self.channels.itervalues()))
 		)
 
@@ -234,10 +248,11 @@ class OwlIntuitionProtocol(DatagramProtocol):
 		self.owlReceived(address, msg)
 
 	def owlReceived(self, address, msg):
+		# for the test program
 		print '%s: %s' % (address, msg)
 
 
-if __name__ == '__main__':
+if __name__ == '__main__': # pragma: no cover
 	# Simple test program!
 	from twisted.internet import reactor
 	from argparse import ArgumentParser
@@ -249,3 +264,4 @@ if __name__ == '__main__':
 	protocol = OwlIntuitionProtocol(iface=options.iface)
 	reactor.listenMulticast(MCAST_PORT, protocol, listenMultiple=True)
 	reactor.run()
+

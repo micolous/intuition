@@ -26,3 +26,10 @@ Other packet types are unsupported and ignored, but patches to implement it are 
 ## some batteries ##
 
 You can use the `intuition.rrd` module to graph electricity usage information with `rrdtool`.
+
+## tests ##
+
+```
+$ cd src
+$ nosetests --with-coverage --cover-package=intuition
+```
