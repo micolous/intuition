@@ -237,6 +237,7 @@ class OwlIntuitionProtocol(DatagramProtocol):
 
 
 if __name__ == '__main__':
+	# Simple test program!
 	from twisted.internet import reactor
 	from argparse import ArgumentParser
 	parser = ArgumentParser()
