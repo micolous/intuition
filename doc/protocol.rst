@@ -5,6 +5,16 @@ Events are broadcast on LAN via Multicast UDP address ``224.192.32.19:22600``.  
 
 These events are from the OWL Intuition-lc.  There may be some more events with the OWL Intuition-pv, however I don't know anything about it (as I do not own the unit nor have a PV generator).
 
+Official protocol documentation:
+
+* `Multicast UDP (PDF)`_
+* `API Documentation`_
+
+.. _Multicast UDP (PDF): https://theowl.zendesk.com/hc/en-gb/article_attachments/200344663/Network_OWL_Multicast.pdf
+.. _API Documentation: https://theowl.zendesk.com/hc/en-gb/articles/201284603-Multicast-UDP-API-Information
+
+
+
 .. highlight:: xml
 
 electricity event
@@ -48,7 +58,7 @@ weather event
 
 These show local weather information, not anything in the device.  It is retrieved from a web service that the Network Owl connects to.  There isn't any sensor in the Network Owl that gives this information.
 
-This library ignores these messages.
+As a result, this library ignores these messages.
 
 Example::
 

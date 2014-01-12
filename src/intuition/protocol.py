@@ -17,6 +17,7 @@ along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
 """
 
+from warnings import warn
 from twisted.internet.protocol import DatagramProtocol
 from lxml import objectify
 from decimal import Decimal
@@ -24,13 +25,51 @@ from decimal import Decimal
 MCAST_ADDR = '224.192.32.19'
 MCAST_PORT = 22600
 
+
+class OwlBaseMessage(object):
+	@property
+	def mac(self):
+		"""
+		MAC Address of the Network Owl.  This information comes from the
+		body of the multicast UDP traffic (not the ethernet headers), so may
+		be spoofed.
+		"""
+		return self._mac
+
+	@property
+	def rssi(self):
+		"""
+		Recieve signal strength (dBm).
+		"""
+		return self._rssi
+
+	@property
+	def lqi(self):
+		"""
+		Link quality, with 0 being best.
+		"""
+		return self._lqi
+
+
 class OwlChannel(object):
-	# structure for storing data about channels
+	# structure for storing data about electricity channels
 	def __init__(self, channel_id, current_w, daily_wh):
-		self.channel_id = channel_id
-		self.current_w = Decimal(current_w)
-		self.daily_wh = Decimal(daily_wh)
+		self._channel_id = channel_id
+		self._current_w = Decimal(current_w)
+		self._daily_wh = Decimal(daily_wh)
 	
+	@property
+	def channel_id(self):
+		return self._channel_id
+
+	@property
+	def current_w(self):
+		return self._current_w
+
+	@property
+	def daily_wh(self):
+		return self._daily_wh
+
 	def __str__(self):
 		return '<OwlChannel: id=%s, current=%s, today=%s>' % (
 			self.channel_id,
@@ -39,66 +78,141 @@ class OwlChannel(object):
 		)
 
 class OwlTemperature(object):
-	# structure for storing data about channels
 	def __init__(self, zone, current_temp, required_temp):
-		self.zone = zone
-		self.current_temp = current_temp
-		self.required_temp = required_temp
+		self._zone = zone
+		self._current_temp = Decimal(current_temp)
+		self._required_temp = Decimal(required_temp)
 
-	def __str__(self):
-		return '<OwlTemperature: zone=%s, current=%s, required=%s>' % (
-			self.zone,
-			self.current_temp,
-			self.required_temp
-		)
+	@property
+	def zone_id(self):
+		"""
+		Unique identifier for the zone.
+		"""
+		return self._zone
 
-class OwlMessage(object):
+	@property
+	def current_temp(self):
+		"""
+		The current temperature in the zone.  Units are undefined by the
+		documentation, but appear to be degrees Celcius.
+		"""
+		return self._current_temp
+
+	@property
+	def required_temp(self):
+		"""
+		The desired temperature in the zone.  Units are undefined by the
+		documentation, but appear to be degrees Celcius.
+		"""
+		return self._required_temp
+	
+
+
+class OwlHeating(OwlBaseMessage):
 	def __init__(self, datagram):
-		#print "datagram: %r" % (datagram,)
-		self.root = objectify.fromstring(datagram)
+		# TODO: support Network Owl 2.3
+		assert (datagram.tag == 'heating'), ('OwlHeating XML must have `heating` root node (got %r).' % datagram.tag)
 		
-		# there are also weather events -- we don't care about these
-		assert (self.root.tag in ['electricity', 'heating'] ), ('OwlMessage XML must have `electricity` or `heating` root node (got %r).' % self.root.tag)
+		self._mac = datagram.attrib['id']
+
+		# read signal information for the sensor's 433MHz link
+		self._rssi = Decimal(datagram.signal[0].attrib['rssi'])
+		self._lqi = Decimal(datagram.signal[0].attrib['lqi'])
+
+		# read battery information from the sensor.
+		self._battery_mv = Decimal(datagram.battery[0].attrib['level'][:-2])
 		
-		# note that the MAC address is given by the message, not the packet.
-		# this can be spoofed
-		self.mac = self.root.attrib['id']
+		self._zones = {}
+		for temp in datagram.temperature:
+			assert temp.attrib['zone'] not in self._zones
+			self._zones[temp.attrib['zone']] = OwlTemperature(temp.attrib['zone'], temp.current[0].text, temp.required[0].text)
+
+
+	@property
+	def battery_mv(self):
+		"""
+		Voltage level of the battery in the sensor, in millivolts.
+		"""
+		return self._battery_mv
+		
+	@property
+	def zones(self):
+		"""
+		Zones defined for managing heating.
+		"""
+		return self._zones
+
+
+class OwlElectricity(OwlBaseMessage):
+	def __init__(self, datagram):
+		assert (datagram.tag == 'electricity'), ('OwlElectricity XML must have `electricity` root node (got %r).' % datagram.tag)
+		
+		self._mac = datagram.attrib['id']
 		
 		# read signal information for the sensor's 433MHz link
-		self.rssi = Decimal(self.root.signal[0].attrib['rssi'])
-		self.lqi = Decimal(self.root.signal[0].attrib['lqi'])
+		self._rssi = Decimal(datagram.signal[0].attrib['rssi'])
+		self._lqi = Decimal(datagram.signal[0].attrib['lqi'])
 		
-		# read battery information from the sensor.	
-		self.battery = self.root.battery[0].attrib['level']
-	
-		self.results = {}
-	
-		# Electric
-		if (self.root.tag == 'electricity'):
+		# read battery information from the sensor.
+		self._battery_pc = Decimal(datagram.battery[0].attrib['level'][:-1])
 		
-			# read sensors (channels)
-			for channel in self.root.chan:
-				assert channel.attrib['id'] not in self.results, 'Channel duplicate'
-				assert channel.curr[0].attrib['units'] == 'w', 'Current units must be watts'
-				assert channel.day[0].attrib['units'] == 'wh', 'Daily usage must be watthours'
+		# read sensors (channels)
+		self._channels = {}
+		for channel in datagram.chan:
+			assert channel.attrib['id'] not in self._channels, 'Channel duplicate'
 			
-				# we're good and done our tests, create a channel
-				self.results[channel.attrib['id']] = OwlChannel(channel.attrib['id'], channel.curr[0].text, channel.day[0].text)	
+			assert channel.curr[0].attrib['units'] == 'w', 'Current units must be watts'
+			assert channel.day[0].attrib['units'] == 'wh', 'Daily usage must be watthours'
+			
+			# we're good and done our tests, create a channel
+			self._channels[channel.attrib['id']] = OwlChannel(channel.attrib['id'], channel.curr[0].text, channel.day[0].text)
+
+	@property
+	def battery_pc(self):
+		"""
+		Percentage of battery remaining.
+		
+		Only on OwlElectricity messages.
+		"""
+		return self._battery_pc
 	
-		# Heating
-		if (self.root.tag == 'heating'):
-			# read temperatures
-			for temp in self.root.temperature:
-				assert temp.attrib['zone'] not in self.results
-				self.results[temp.attrib['zone']] = OwlTemperature(temp.attrib['zone'], temp.current, temp.required)
-	
+	@property
+	def battery(self):
+		"""
+		Deprecated: use OwlElectricity.battery_pc instead.
+		"""
+		warn('Use OwlElectricity.battery_pc instead.', DeprecationWarning, stacklevel=2)
+		return self.battery_pc
+
+	@property
+	def channels(self):
+		return self._channels
+
 	def __str__(self):
-		return '<OwlMessage: rssi=%s, lqi=%s, battery=%s, results=%s>' % (
+		return '<OwlElectricity: rssi=%s, lqi=%s, battery=%s%%, channels=%s>' % (
 			self.rssi,
 			self.lqi,
 			self.battery,
-			', '.join((str(x) for x in self.results.itervalues()))
+			', '.join((str(x) for x in self.channels.itervalues()))
 		)
+
+
+def parse_datagram(datagram):
+	"""
+	Parses a Network Owl datagram.
+	"""
+	xml = objectify.fromstring(datagram)
+	
+	if xml.tag == 'electricity':
+		msg = OwlElectricity(xml)
+	elif xml.tag == 'heating':
+		# note: requires network owl 2.2
+		# TODO: implement network owl 2.3 support
+		msg = OwlHeating(xml)
+	else:
+		raise NotImplementedError, 'Message type %r not implemented.' % msg.tag
+
+	return msg
 
 
 class OwlIntuitionProtocol(DatagramProtocol):
@@ -113,11 +227,11 @@ class OwlIntuitionProtocol(DatagramProtocol):
 
 	def startProtocol(self):
 		self.transport.joinGroup(MCAST_ADDR, self.iface)
-	
+
 	def datagramReceived(self, datagram, address):
-		msg = OwlMessage(datagram)
+		msg = parse_datagram(datagram)
 		self.owlReceived(address, msg)
-	
+
 	def owlReceived(self, address, msg):
 		print '%s: %s' % (address, msg)
 
